@@ -311,6 +311,7 @@ func parseAttributes(attributes []interface{}) ([]attribute, error) {
 				}
 			}
 		}
+		schemaAttributes = append(schemaAttributes, attribute)
 	}
 	return schemaAttributes, nil
 }
