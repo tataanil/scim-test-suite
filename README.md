@@ -6,7 +6,7 @@ package suite
 import (
 	"testing"
 
-	. "github.com/di-wu/scim-testsuite"
+	. "github.com/di-wu/scim-test-suite"
 	"github.com/stretchr/testify/suite"
 )
 

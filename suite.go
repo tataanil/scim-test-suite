@@ -1,7 +1,7 @@
 package suite
 
 import (
-	"github.com/di-wu/scim-testsuite/util"
+	"github.com/di-wu/scim-test-suite/util"
 )
 
 type SCIMTestSuite struct {

@@ -9,7 +9,7 @@ package suite
 import (
 	"testing"
 
-	"github.com/di-wu/scim-testsuite/idp/okta"
+	"github.com/di-wu/scim-test-suite/idp/okta"
 	"github.com/stretchr/testify/suite"
 )
 

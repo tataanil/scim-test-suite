@@ -1,4 +1,4 @@
-module github.com/di-wu/scim-testsuite
+module github.com/di-wu/scim-test-suite
 
 go 1.14
 
