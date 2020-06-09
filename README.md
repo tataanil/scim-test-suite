@@ -1,6 +1,8 @@
 # SCIM v2 Test Suite
 
 ```go
+package suite
+
 import (
 	"testing"
 
@@ -19,3 +21,6 @@ func TestSCIM(t *testing.T) {
 #### Table of Contents
 The following list includes all the parts of the RFC that are covered by the test suite.
 - [x] 4\. Service Provider Configuration Endpoints
+
+### Identity Providers
+#### [Okta](./idp/okta/)

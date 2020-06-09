@@ -2,28 +2,29 @@ package suite
 
 import (
 	"fmt"
+	filter "github.com/di-wu/scim-filter-parser"
 	"github.com/elimity-com/scim/errors"
+	"github.com/elimity-com/scim/schema"
 	"math/rand"
 	"net/http"
 	"time"
 
 	. "github.com/elimity-com/scim"
 	"github.com/elimity-com/scim/optional"
-	"github.com/elimity-com/scim/schema"
 )
 
 func TestServer() Server {
-	userSchema := getUserSchema()
-	userSchemaExtension := getUserExtensionSchema()
 	return Server{
-		Config: ServiceProviderConfig{},
+		Config: ServiceProviderConfig{
+			SupportFiltering: true,
+		},
 		ResourceTypes: []ResourceType{
 			{
 				ID:          optional.NewString("User"),
 				Name:        "User",
 				Endpoint:    "/Users",
 				Description: optional.NewString("User Account"),
-				Schema:      userSchema,
+				Schema:      schema.CoreUserSchema(),
 				Handler:     newTestResourceHandler(),
 			},
 			{
@@ -31,93 +32,20 @@ func TestServer() Server {
 				Name:        "EnterpriseUser",
 				Endpoint:    "/EnterpriseUsers",
 				Description: optional.NewString("Enterprise User Account"),
-				Schema:      userSchema,
+				Schema:      schema.CoreUserSchema(),
 				SchemaExtensions: []SchemaExtension{
-					{Schema: userSchemaExtension},
+					{Schema: schema.ExtensionEnterpriseUser()},
 				},
 				Handler: newTestResourceHandler(),
 			},
-		},
-	}
-}
-
-func getUserSchema() schema.Schema {
-	return schema.Schema{
-		ID:          "urn:ietf:params:scim:schemas:core:2.0:User",
-		Name:        optional.NewString("User"),
-		Description: optional.NewString("User Account"),
-		Attributes: []schema.CoreAttribute{
-			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name:       "userName",
-				Required:   true,
-				Uniqueness: schema.AttributeUniquenessServer(),
-			})),
-			schema.SimpleCoreAttribute(schema.SimpleBooleanParams(schema.BooleanParams{
-				Name:     "active",
-				Required: false,
-			})),
-			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name:       "readonlyThing",
-				Required:   false,
-				Mutability: schema.AttributeMutabilityReadOnly(),
-			})),
-			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name:       "immutableThing",
-				Required:   false,
-				Mutability: schema.AttributeMutabilityImmutable(),
-			})),
-			schema.ComplexCoreAttribute(schema.ComplexParams{
-				Name:     "Name",
-				Required: false,
-				SubAttributes: []schema.SimpleParams{
-					schema.SimpleStringParams(schema.StringParams{
-						Name: "familyName",
-					}),
-					schema.SimpleStringParams(schema.StringParams{
-						Name: "givenName",
-					}),
-				},
-			}),
-			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name: "displayName",
-			})),
-			schema.ComplexCoreAttribute(schema.ComplexParams{
-				Name:        "emails",
-				MultiValued: true,
-				SubAttributes: []schema.SimpleParams{
-					schema.SimpleStringParams(schema.StringParams{
-						Name: "value",
-					}),
-					schema.SimpleStringParams(schema.StringParams{
-						Name: "display",
-					}),
-					schema.SimpleStringParams(schema.StringParams{
-						Name: "type",
-						CanonicalValues: []string{
-							"work", "home", "other",
-						},
-					}),
-					schema.SimpleBooleanParams(schema.BooleanParams{
-						Name: "primary",
-					}),
-				},
-			}),
-		},
-	}
-}
-
-func getUserExtensionSchema() schema.Schema {
-	return schema.Schema{
-		ID:          "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-		Name:        optional.NewString("EnterpriseUser"),
-		Description: optional.NewString("Enterprise User"),
-		Attributes: []schema.CoreAttribute{
-			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name: "employeeNumber",
-			})),
-			schema.SimpleCoreAttribute(schema.SimpleStringParams(schema.StringParams{
-				Name: "organization",
-			})),
+			{
+				ID:          optional.NewString("Group"),
+				Name:        "Group",
+				Endpoint:    "/Groups",
+				Description: optional.NewString("Group"),
+				Schema:      schema.CoreGroupSchema(),
+				Handler:     newTestResourceHandler(),
+			},
 		},
 	}
 }
@@ -131,6 +59,16 @@ func newTestResourceHandler() ResourceHandler {
 			resourceAttributes: ResourceAttributes{
 				"userName":   fmt.Sprintf("test%d", i),
 				"externalId": fmt.Sprintf("external%d", i),
+				"name": map[string]interface{}{
+					"familyName": fmt.Sprintf("familyName%d", i),
+					"givenName":  fmt.Sprintf("givenName%d", i),
+				},
+				"active": true,
+				"emails": []map[string]interface{}{
+					{
+						"value": fmt.Sprintf("%d@example.com", i),
+					},
+				},
 			},
 			meta: map[string]string{
 				"created":      fmt.Sprintf("2020-01-%02dT15:04:05+07:00", i),
@@ -159,6 +97,12 @@ func (h TestResourceHandler) Create(r *http.Request, attributes ResourceAttribut
 	// create unique identifier
 	rand.Seed(time.Now().UnixNano())
 	id := fmt.Sprintf("%04d", rand.Intn(9999))
+
+	for _, entity := range h.data {
+		if entity.resourceAttributes["userName"] == attributes["userName"] {
+			return Resource{}, errors.ScimErrorUniqueness
+		}
+	}
 
 	// store resource
 	h.data[id] = TestData{
@@ -204,10 +148,30 @@ func (h TestResourceHandler) Get(r *http.Request, id string) (Resource, error) {
 }
 
 func (h TestResourceHandler) GetAll(r *http.Request, params ListRequestParams) (Page, error) {
-	resources := make([]Resource, 0)
-	i := 1
+	data := h.data
+	if params.Filter != nil {
+		filteredData := make( map[string]TestData)
+		for k, v := range h.data {
+			// Only 'x eq userName' is implemented
+			switch params.Filter.(type) {
+			case filter.AttributeExpression:
+				attrExp := params.Filter.(filter.AttributeExpression)
+				if attrExp.CompareOperator == filter.EQ {
+					switch name := attrExp.AttributePath.AttributeName; name {
+					case "userName":
+						if  name == h.userName(v.resourceAttributes) {
+							filteredData[k] = v
+						}
+					}
+				}
+			}
+		}
+		data = filteredData
+	}
 
-	for k, v := range h.data {
+	i := 1
+	resources := make([]Resource, 0)
+	for k, v := range data {
 		if i > (params.StartIndex + params.Count - 1) {
 			break
 		}
@@ -223,7 +187,7 @@ func (h TestResourceHandler) GetAll(r *http.Request, params ListRequestParams) (
 	}
 
 	return Page{
-		TotalResults: len(h.data),
+		TotalResults: len(data),
 		Resources:    resources,
 	}, nil
 }
@@ -318,4 +282,14 @@ func (h TestResourceHandler) externalID(attributes ResourceAttributes) optional.
 	}
 
 	return optional.String{}
+}
+
+func (h TestResourceHandler) userName(attributes ResourceAttributes) string {
+	if eID, ok := attributes["userName"]; ok {
+		if userName, ok := eID.(string); ok {
+			return userName
+		}
+	}
+
+	return ""
 }

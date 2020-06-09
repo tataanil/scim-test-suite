@@ -1,5 +1,7 @@
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/di-wu/regen v0.0.0-20191224153906-041b1bce4065 h1:Iov2tpNADzF5m/JwT+c1A8u40GmJKpmZp9Sb3jrPIPI=
+github.com/di-wu/regen v0.0.0-20191224153906-041b1bce4065/go.mod h1:1AGOmC2ExxkWjWb7bQNwFD2+0PxttZRYlLeUayrARus=
 github.com/di-wu/scim-filter-parser v0.0.0-20191024153148-b33ea97ae796 h1:pzRK8hH/UoxQn2FqqUSYZwvKOvWMuNKyAurHVu2oU0M=
 github.com/di-wu/scim-filter-parser v0.0.0-20191024153148-b33ea97ae796/go.mod h1:Q9X8NLzgdqI3Z0XcbiPpdAEql664lC6ExBN7B6ZLhco=
 github.com/di-wu/xsd-datetime v0.0.0-20190813080539-55a8ba70aa69 h1:KlIk21PbvrYUBb2Dv2gsd4VZjYviGgevIadTj9ebExU=
