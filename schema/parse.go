@@ -3,10 +3,25 @@ package schema
 import (
 	"encoding/json"
 	"fmt"
-
 	"github.com/elimity-com/scim/optional"
 	. "github.com/elimity-com/scim/schema"
 )
+
+var (
+	MetaSchema Schema
+)
+
+func init() {
+	MetaSchema = loadSchema(rawMetaSchema)
+}
+
+func loadSchema(rawSchema string) Schema {
+	schema, err := ParseJSONSchema([]byte(rawSchema))
+	if err != nil {
+		panic(err)
+	}
+	return schema
+}
 
 // ParseJSONSchema converts raw json data into a SCIM Schema.
 // RFC: https://tools.ietf.org/html/rfc7643#section-7

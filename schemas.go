@@ -2,10 +2,12 @@ package suite
 
 import (
 	"encoding/json"
+	"io/ioutil"
+
+	s "github.com/di-wu/scim-test-suite/schema"
 	"github.com/elimity-com/abnf"
 	"github.com/elimity-com/abnf/core"
 	"github.com/elimity-com/abnf/operators"
-	"io/ioutil"
 )
 
 // RFC: https://tools.ietf.org/html/rfc7643#section-2
@@ -28,6 +30,25 @@ func attrName() func(s string) bool {
 	attrNameOperator := g.GenerateABNFAsOperators()["ATTRNAME"]
 	return func(attrName string) bool {
 		return attrNameOperator([]byte(attrName)).Best() != nil
+	}
+}
+
+func (suite *SCIMTestSuite) TestSchemas() {
+	resp, err := suite.Get("/Schemas")
+	suite.Require().NoError(err)
+
+	var mapData map[string]interface{}
+	raw, err := ioutil.ReadAll(resp.Body)
+	suite.Require().NoError(err)
+	suite.Require().NoError(json.Unmarshal(raw, &mapData))
+
+	suite.NotNil(mapData["Resources"])
+	schemas, ok := mapData["Resources"].([]interface{})
+	suite.Require().True(ok)
+	for _, rawSchema := range schemas {
+		schema, err := s.MetaSchema.Validate(rawSchema)
+		suite.Require().Nil(err)
+		suite.NotEmpty(schema)
 	}
 }
 
