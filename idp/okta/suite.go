@@ -1,6 +1,7 @@
 package okta
 
 import (
+	"encoding/json"
 	"github.com/di-wu/regen"
 	"github.com/di-wu/scim-test-suite/util"
 )
@@ -12,11 +13,15 @@ type TestSuite struct {
 	randomEmail func() string
 }
 
+func (s *TestSuite) IsNumber(i interface{}) {
+	s.IsType(json.Number("0"), i)
+}
+
 func (s *TestSuite) SetInvalidID(random func() string) {
 	s.invalidID = random
 }
 
-func (s *TestSuite) InvalidID() string  {
+func (s *TestSuite) InvalidID() string {
 	if s.invalidID != nil {
 		return s.invalidID()
 	}

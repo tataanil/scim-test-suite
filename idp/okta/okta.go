@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"strings"
 	"time"
@@ -14,18 +13,14 @@ import (
 
 // Required Test: Test Users endpoint.
 func (s *TestSuite) TestGetFirstUser() {
-	resp, err := s.Get("/Users?count=1&startIndex=1")
-	s.Require().NoError(err)
+	resp := s.Get("/Users?count=1&startIndex=1")
 
 	// Assertion 0
 	s.Run("StatusCode", func() {
 		s.StatusOK(resp.StatusCode)
 	})
 
-	var mapData map[string]interface{}
-	raw, err := ioutil.ReadAll(resp.Body)
-	s.Require().NoError(err)
-	s.Require().NoError(json.Unmarshal(raw, &mapData))
+	mapData := s.ReadAllToMap(resp)
 
 	// Assertion 1
 	s.Run("ResourcesNotEmpty", func() {
@@ -52,20 +47,17 @@ func (s *TestSuite) TestGetFirstUser() {
 		s.IsNumber(mapData["totalResults"])
 	})
 
-	resources, ok := mapData["Resources"].([]interface{})
-	s.Require().True(ok)
-	s.Require().NotEmpty(resources)
-	entity, ok := resources[0].(map[string]interface{})
-	s.Require().True(ok)
+	var (
+		resources = s.GetSlice("Resources", mapData)
+		entity    = s.IsMap(resources[0])
+	)
 
 	// Assertion 6
 	s.Run("IDNotEmpty", func() {
 		s.NotEmpty(entity["id"])
 	})
 
-	s.Require().NotEmpty(entity["name"])
-	name, ok := entity["name"].(map[string]interface{})
-	s.Require().True(ok)
+	name := s.GetMap("name", entity)
 
 	// Assertion 7
 	s.Run("FamilyNameNotEmpty", func() {
@@ -87,12 +79,10 @@ func (s *TestSuite) TestGetFirstUser() {
 		s.NotEmpty(entity["active"])
 	})
 
-	s.Require().NotEmpty(entity["emails"])
-	emails, ok := entity["emails"].([]interface{})
-	s.Require().True(ok)
-	s.Require().NotEmpty(emails)
-	email, ok := emails[0].(map[string]interface{})
-	s.Require().True(ok)
+	var (
+		emails = s.GetSlice("emails", entity)
+		email  = s.IsMap(emails[0])
+	)
 
 	// Assertion 11
 	s.Run("FirstEmailValueNotEmpty", func() {
@@ -102,42 +92,29 @@ func (s *TestSuite) TestGetFirstUser() {
 
 // Required Test: Get Users/{{id}}.
 func (s *TestSuite) TestGetExistingUser() {
-	_resp, err := s.Get("/Users?count=1&startIndex=1")
-	s.Require().NoError(err)
-	var _map map[string]interface{}
-	_raw, err := ioutil.ReadAll(_resp.Body)
-	s.Require().NoError(err)
-	s.Require().NoError(json.Unmarshal(_raw, &_map))
-	_resources, ok := _map["Resources"].([]interface{})
-	s.Require().True(ok)
-	s.Require().NotEmpty(_resources)
-	_entity, ok := _resources[0].(map[string]interface{})
-	s.Require().True(ok)
-	s.NotEmpty(_entity["id"])
-	id, ok := _entity["id"]
-	s.Require().True(ok)
+	var (
+		_resp      = s.Get("/Users?count=1&startIndex=1")
+		_map       = s.ReadAllToMap(_resp)
+		_resources = s.GetSlice("Resources", _map)
+		_entity    = s.IsMap(_resources[0])
+		id         = s.GetString("id", _entity)
+	)
 
-	resp, err := s.Get(fmt.Sprintf("/Users/%s", id))
-	s.Require().NoError(err)
+	resp := s.Get(fmt.Sprintf("/Users/%s", id))
 
 	// Assertion 0
 	s.Run("StatusCode", func() {
 		s.StatusOK(resp.StatusCode)
 	})
 
-	var entity map[string]interface{}
-	raw, err := ioutil.ReadAll(resp.Body)
-	s.Require().NoError(err)
-	s.Require().NoError(json.Unmarshal(raw, &entity))
+	entity := s.ReadAllToMap(resp)
 
 	// Assertion 1
 	s.Run("IDNotEmpty", func() {
 		s.NotEmpty(entity["id"])
 	})
 
-	s.Require().NotEmpty(entity["name"])
-	name, ok := entity["name"].(map[string]interface{})
-	s.Require().True(ok)
+	name := s.GetMap("name", entity)
 
 	// Assertion 2
 	s.Run("FamilyNameNotEmpty", func() {
@@ -159,12 +136,10 @@ func (s *TestSuite) TestGetExistingUser() {
 		s.NotEmpty(entity["active"])
 	})
 
-	s.Require().NotEmpty(entity["emails"])
-	emails, ok := entity["emails"].([]interface{})
-	s.Require().True(ok)
-	s.Require().NotEmpty(emails)
-	email, ok := emails[0].(map[string]interface{})
-	s.Require().True(ok)
+	var (
+		emails = s.GetSlice("emails", entity)
+		email  = s.IsMap(emails[0])
+	)
 
 	// Assertion 6
 	s.Run("FirstEmailValueNotEmpty", func() {
@@ -179,20 +154,17 @@ func (s *TestSuite) TestGetExistingUser() {
 
 // Required Test: Test invalid User by userName.
 func (s *TestSuite) TestGetInvalidUserByUserName() {
-	filter := url.Values{}
-	filter.Set("filter", fmt.Sprintf("userName eq \"%s\"", s.RandomEmail()))
-	resp, err := s.Get(fmt.Sprintf("/Users?%s", filter.Encode()))
-	s.Require().NoError(err)
+	filter := url.Values{
+		"filter": []string{fmt.Sprintf("userName eq \"%s\"", s.RandomEmail())},
+	}
+	resp := s.Get(fmt.Sprintf("/Users?%s", filter.Encode()))
 
 	// Assertion 0
 	s.Run("StatusCode", func() {
 		s.StatusOK(resp.StatusCode)
 	})
 
-	var mapData map[string]interface{}
-	raw, err := ioutil.ReadAll(resp.Body)
-	s.Require().NoError(err)
-	s.Require().NoError(json.Unmarshal(raw, &mapData))
+	mapData := s.ReadAllToMap(resp)
 
 	// Assertion 1
 	s.Run("ContainsSchema", func() {
@@ -201,24 +173,20 @@ func (s *TestSuite) TestGetInvalidUserByUserName() {
 
 	// Assertion 2
 	s.Run("NoResults", func() {
-		s.Equal(0.0, mapData["totalResults"])
+		s.Equal(json.Number("0"), mapData["totalResults"])
 	})
 }
 
 // Required Test: Test invalid User by ID.
 func (s *TestSuite) TestGetInvalidUser() {
-	resp, err := s.Get(fmt.Sprintf("/Users/%s", s.InvalidID()))
-	s.Require().NoError(err)
+	resp := s.Get(fmt.Sprintf("/Users/%s", s.InvalidID()))
 
 	// Assertion 0
 	s.Run("StatusCode", func() {
 		s.StatusNotFound(resp.StatusCode)
 	})
 
-	var mapData map[string]interface{}
-	raw, err := ioutil.ReadAll(resp.Body)
-	s.Require().NoError(err)
-	s.Require().NoError(json.Unmarshal(raw, &mapData))
+	mapData := s.ReadAllToMap(resp)
 
 	// Assertion 1
 	s.Run("DetailNotEmpty", func() {
@@ -234,24 +202,21 @@ func (s *TestSuite) TestGetInvalidUser() {
 // Required Test: Make sure random user doesn't exist.
 func (s *TestSuite) TestGetUserByRandomUserName() {
 	// NOTE: UserNames are always an email in the original Okta Spec Test.
-	filter := url.Values{}
-	filter.Set("filter", fmt.Sprintf("userName eq \"%s\"", s.RandomEmail()))
-	resp, err := s.Get(fmt.Sprintf("/Users?%s", filter.Encode()))
-	s.Require().NoError(err)
+	filter := url.Values{
+		"filter": []string{fmt.Sprintf("userName eq \"%s\"", s.RandomEmail())},
+	}
+	resp := s.Get(fmt.Sprintf("/Users?%s", filter.Encode()))
 
 	// Assertion 0
 	s.Run("StatusCode", func() {
 		s.StatusOK(resp.StatusCode)
 	})
 
-	var mapData map[string]interface{}
-	raw, err := ioutil.ReadAll(resp.Body)
-	s.Require().NoError(err)
-	s.Require().NoError(json.Unmarshal(raw, &mapData))
+	mapData := s.ReadAllToMap(resp)
 
 	// Assertion 1
 	s.Run("TotalResultsIsNumber0", func() {
-		s.Equal(float64(0), mapData["totalResults"])
+		s.Equal(json.Number("0"), mapData["totalResults"])
 	})
 
 	// Assertion 2
@@ -282,18 +247,14 @@ func (s *TestSuite) TestCreateUser() {
 		"active":      true,
 	})
 	s.Require().NoError(err)
-	resp, err := s.Post("/Users", bytes.NewReader(body))
-	s.Require().NoError(err)
+	resp := s.Post("/Users", bytes.NewReader(body))
 
 	// Assertion 0
 	s.Run("StatusCode", func() {
 		s.StatusCreated(resp.StatusCode)
 	})
 
-	var entity map[string]interface{}
-	raw, err := ioutil.ReadAll(resp.Body)
-	s.Require().NoError(err)
-	s.Require().NoError(json.Unmarshal(raw, &entity))
+	entity := s.ReadAllToMap(resp)
 
 	// Assertion 1
 	s.Run("ActiveTrue", func() {
@@ -305,9 +266,7 @@ func (s *TestSuite) TestCreateUser() {
 		s.NotEmpty(entity["id"])
 	})
 
-	s.Require().NotEmpty(entity["name"])
-	name, ok := entity["name"].(map[string]interface{})
-	s.Require().True(ok)
+	name := s.GetMap("name", entity)
 
 	// Assertion 3
 	s.Run("FamilyNameMatches", func() {
@@ -329,9 +288,7 @@ func (s *TestSuite) TestCreateUser() {
 		s.Equal(randomUserName, entity["userName"])
 	})
 
-	s.Require().NotEmpty(entity["id"])
-	id, ok := entity["id"].(string)
-	s.Require().True(ok)
+	id := s.GetString("id", entity)
 
 	// Next Tests
 	s.Run("VerifyCreation", func() {
@@ -346,27 +303,21 @@ func (s *TestSuite) TestCreateUser() {
 // Required Test: Verify that user was created.
 // NOTE: Gets called at the end of TestCreateUser().
 func (s *TestSuite) testVerifyUserCreated(id, userName, familyName, givenName string) {
-	resp, err := s.Get(fmt.Sprintf("/Users/%s", id))
-	s.Require().NoError(err)
+	resp := s.Get(fmt.Sprintf("/Users/%s", id))
 
 	// Assertion 0
 	s.Run("StatusCode", func() {
 		s.StatusOK(resp.StatusCode)
 	})
 
-	var entity map[string]interface{}
-	raw, err := ioutil.ReadAll(resp.Body)
-	s.Require().NoError(err)
-	s.Require().NoError(json.Unmarshal(raw, &entity))
+	entity := s.ReadAllToMap(resp)
 
 	// Assertion 1
 	s.Run("UserNameMatches", func() {
 		s.Equal(userName, entity["userName"])
 	})
 
-	s.Require().NotEmpty(entity["name"])
-	name, ok := entity["name"].(map[string]interface{})
-	s.Require().True(ok)
+	name := s.GetMap("name", entity)
 
 	// Assertion 2
 	s.Run("FamilyNameMatches", func() {
@@ -382,8 +333,7 @@ func (s *TestSuite) testVerifyUserCreated(id, userName, familyName, givenName st
 // Required Test: Expect failure when recreating user with same values
 // NOTE: Gets called at the end of TestCreateUser().
 func (s *TestSuite) testCreateDuplicate(body []byte) {
-	resp, err := s.Post("/Users", bytes.NewReader(body))
-	s.Require().NoError(err)
+	resp := s.Post("/Users", bytes.NewReader(body))
 
 	// Assertion 0
 	s.Run("StatusCode", func() {
@@ -393,10 +343,10 @@ func (s *TestSuite) testCreateDuplicate(body []byte) {
 
 // Required Test: Username Case Sensitivity Check.
 func (s *TestSuite) TestUserNameCS() {
-	filter := url.Values{}
-	filter.Set("filter", fmt.Sprintf("userName eq \"%s\"", strings.ToUpper(s.RandomEmail())))
-	resp, err := s.Get(fmt.Sprintf("/Users?%s", filter.Encode()))
-	s.Require().NoError(err)
+	filter := url.Values{
+		"filter": []string{fmt.Sprintf("userName eq \"%s\"", strings.ToUpper(s.RandomEmail()))},
+	}
+	resp := s.Get(fmt.Sprintf("/Users?%s", filter.Encode()))
 
 	// Assertion 0
 	s.Run("StatusCode", func() {
@@ -407,9 +357,8 @@ func (s *TestSuite) TestUserNameCS() {
 // Optional Test: Verify Groups endpoint.
 func (s *TestSuite) TestGetGroups() {
 	t := time.Now()
-	resp, err := s.Get("/Groups")
+	resp := s.Get("/Groups")
 	d := time.Since(t)
-	s.Require().NoError(err)
 
 	// Assertion 0
 	s.Run("StatusCode", func() {

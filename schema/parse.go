@@ -16,21 +16,21 @@ func init() {
 }
 
 func loadSchema(rawSchema string) Schema {
-	schema, err := ParseJSONSchema([]byte(rawSchema))
+	var jsonSchema map[string]interface{}
+	if err := json.Unmarshal([]byte(rawSchema), &jsonSchema); err != nil {
+		panic(err)
+	}
+
+	schema, err := ParseJSONSchema(jsonSchema)
 	if err != nil {
 		panic(err)
 	}
 	return schema
 }
 
-// ParseJSONSchema converts raw json data into a SCIM Schema.
+// ParseJSONSchema converts the given map into a SCIM Schema.
 // RFC: https://tools.ietf.org/html/rfc7643#section-7
-func ParseJSONSchema(raw []byte) (Schema, error) {
-	var jsonSchema map[string]interface{}
-	if err := json.Unmarshal(raw, &jsonSchema); err != nil {
-		return Schema{}, err
-	}
-
+func ParseJSONSchema(jsonSchema map[string]interface{}) (Schema, error) {
 	var schema Schema
 	var jsonAttributes []interface{}
 	for k, v := range jsonSchema {
