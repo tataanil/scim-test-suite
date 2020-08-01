@@ -10,6 +10,7 @@ import (
 )
 
 // SOURCE: https://developer.okta.com/standards/SCIM/SCIMFiles/Okta-SCIM-20-SPEC-Test.json
+//		   -- June 09 2020
 
 // Required Test: Test Users endpoint.
 func (s *TestSuite) TestGetFirstUser() {

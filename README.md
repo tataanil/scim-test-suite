@@ -22,5 +22,6 @@ func TestSCIM(t *testing.T) {
 The following list includes all the parts of the RFC that are covered by the test suite.
 - [x] 4\. Service Provider Configuration Endpoints
 
-### Identity Providers
+### [Identity Providers](./idp/)
 #### [Okta](./idp/okta/)
+#### [AzureAD](./idp/azure_ad/)

@@ -25,6 +25,10 @@ func (suite *Suite) StatusCreated(status int) {
 	suite.Equal(http.StatusCreated, status)
 }
 
+func (suite *Suite) StatusNoContent(status int) {
+	suite.Equal(http.StatusNoContent, status)
+}
+
 func (suite *Suite) StatusForbidden(status int) {
 	suite.Equal(http.StatusForbidden, status)
 }

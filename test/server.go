@@ -18,6 +18,7 @@ func Server() scim.Server {
 	return scim.Server{
 		Config: scim.ServiceProviderConfig{
 			SupportFiltering: true,
+			SupportPatch:     true,
 		},
 		ResourceTypes: []scim.ResourceType{
 			{
@@ -100,7 +101,9 @@ func (h ResourceHandler) Create(r *http.Request, attributes scim.ResourceAttribu
 	id := fmt.Sprintf("%04d", rand.Intn(9999))
 
 	for _, entity := range h.data {
-		if entity.resourceAttributes["userName"] == attributes["userName"] {
+		uN1, ok1 := entity.resourceAttributes["userName"]
+		uN2, ok2 := attributes["userName"]
+		if ok1 && ok2 && uN1 == uN2 {
 			return scim.Resource{}, errors.ScimErrorUniqueness
 		}
 	}
@@ -160,7 +163,11 @@ func (h ResourceHandler) GetAll(r *http.Request, params scim.ListRequestParams) 
 				if attrExp.CompareOperator == filter.EQ {
 					switch name := attrExp.AttributePath.AttributeName; name {
 					case "userName":
-						if name == h.userName(v.resourceAttributes) {
+						if attrExp.CompareValue == h.userName(v.resourceAttributes) {
+							filteredData[k] = v
+						}
+					case "displayName":
+						if attrExp.CompareValue == h.displayName(v.resourceAttributes) {
 							filteredData[k] = v
 						}
 					}
@@ -169,7 +176,6 @@ func (h ResourceHandler) GetAll(r *http.Request, params scim.ListRequestParams) 
 		}
 		data = filteredData
 	}
-
 	i := 1
 	resources := make([]scim.Resource, 0)
 	for k, v := range data {
@@ -286,9 +292,19 @@ func (h ResourceHandler) externalID(attributes scim.ResourceAttributes) optional
 }
 
 func (h ResourceHandler) userName(attributes scim.ResourceAttributes) string {
-	if eID, ok := attributes["userName"]; ok {
-		if userName, ok := eID.(string); ok {
+	if uN, ok := attributes["userName"]; ok {
+		if userName, ok := uN.(string); ok {
 			return userName
+		}
+	}
+
+	return ""
+}
+
+func (h ResourceHandler) displayName(attributes scim.ResourceAttributes) string {
+	if dN, ok := attributes["displayName"]; ok {
+		if displayName, ok := dN.(string); ok {
+			return displayName
 		}
 	}
 
